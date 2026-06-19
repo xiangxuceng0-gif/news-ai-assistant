@@ -1,0 +1,40 @@
+name: 世界杯资讯报告
+
+on:
+  schedule:
+    # 北京时间 8:00 / 12:00 / 16:00 / 22:00
+    # UTC = 北京时间 - 8h
+    - cron: "0 0,4,8,14 * * *"
+  workflow_dispatch:
+
+jobs:
+  worldcup-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout 仓库
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装依赖
+        run: |
+          pip install -r requirements.txt
+
+      - name: 运行世界杯资讯助手
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: https://api.deepseek.com/anthropic
+          ANTHROPIC_MODEL: deepseek-v4-pro
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+        run: |
+          python -m src.worldcup_main
+
+      - name: 失败通知
+        if: failure()
+        run: |
+          echo "世界杯资讯助手运行失败，请检查日志。"

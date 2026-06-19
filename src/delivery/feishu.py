@@ -235,3 +235,157 @@ async def _send_empty_report() -> bool:
         },
     }
     return await _send_to_feishu(card)
+
+
+async def send_worldcup_report(report: Dict[str, Any]) -> bool:
+    """
+    将世界杯战报推送到飞书。
+
+    Args:
+        report: summarizer 返回的 {"matches": [...], "editor_note": "..."}
+    """
+    if not FEISHU_WEBHOOK_URL:
+        logger.error("未设置 FEISHU_WEBHOOK_URL")
+        return False
+
+    matches = report.get("matches", [])
+    editor_note = report.get("editor_note", "")
+    last_updated = report.get("last_updated", datetime.now(BEIJING_TZ).strftime("%Y-%m-%d %H:%M"))
+
+    if not matches:
+        return await _send_to_feishu({
+            "msg_type": "interactive",
+            "card": {
+                "header": {
+                    "title": {"tag": "plain_text", "content": "⚽ 世界杯日报 · 今日无比赛"},
+                    "template": "grey",
+                },
+                "elements": [{
+                    "tag": "div",
+                    "text": {"tag": "lark_md", "content": "今日没有世界杯比赛安排。"},
+                }],
+            },
+        })
+
+    # 分类
+    completed = [m for m in matches if m.get("status") == "completed"]
+    live = [m for m in matches if m.get("status") == "live"]
+    upcoming = [m for m in matches if m.get("status") == "upcoming"]
+
+    date_str = datetime.now(BEIJING_TZ).strftime("%Y年%m月%d日")
+    elements = []
+
+    # ── 标题 ──
+    elements.append({
+        "tag": "div",
+        "text": {
+            "tag": "lark_md",
+            "content": f"⚽ **2026 世界杯日报 · {date_str}**\n更新时间: {last_updated}",
+        },
+    })
+    elements.append({"tag": "hr"})
+
+    # ── 最新赛果 ──
+    if completed:
+        elements.append({
+            "tag": "div",
+            "text": {"tag": "lark_md", "content": f"🏁 **最新赛果**（{len(completed)} 场）"},
+        })
+        for m in completed:
+            hf = m.get("home_flag", "")
+            af = m.get("away_flag", "")
+            group = m.get("group", "")
+            summary = m.get("match_summary", "")
+            star = m.get("star_player") or ""
+            key = m.get("key_moment") or ""
+
+            lines = [
+                f"**{hf} {m['home_team']} {m.get('home_score', '-')} - {m.get('away_score', '-')} {m['away_team']} {af}**",
+            ]
+            if summary:
+                lines.append(f"  {summary}")
+            if star and star != "null":
+                lines.append(f"  ⭐ {star}")
+            if key and key != "null":
+                lines.append(f"  🔥 {key}")
+            if group:
+                lines.append(f"  _{group}_")
+
+            elements.append({
+                "tag": "div",
+                "text": {"tag": "lark_md", "content": "\n".join(lines)},
+            })
+
+        elements.append({"tag": "hr"})
+
+    # ── 进行中 ──
+    if live:
+        elements.append({
+            "tag": "div",
+            "text": {"tag": "lark_md", "content": f"🔴 **进行中**（{len(live)} 场）"},
+        })
+        for m in live:
+            hf = m.get("home_flag", "")
+            af = m.get("away_flag", "")
+            clock = m.get("match_clock", "")
+            lines = [
+                f"**{hf} {m['home_team']} {m.get('home_score', '-')} - {m.get('away_score', '-')} {m['away_team']} {af}**",
+                f"  ⏱ {clock}"
+            ]
+            elements.append({
+                "tag": "div",
+                "text": {"tag": "lark_md", "content": "\n".join(lines)},
+            })
+        elements.append({"tag": "hr"})
+
+    # ── 赛事预告 ──
+    if upcoming:
+        elements.append({
+            "tag": "div",
+            "text": {"tag": "lark_md", "content": f"📅 **赛事预告**（{len(upcoming)} 场）"},
+        })
+        for m in upcoming[:6]:
+            hf = m.get("home_flag", "")
+            af = m.get("away_flag", "")
+            start = m.get("start_time", "待定")
+            group = m.get("group", "")
+            lines = [f"**{start}** {hf} {m['home_team']} vs {m['away_team']} {af}"]
+            if group:
+                lines.append(f"  _{group}_")
+            elements.append({
+                "tag": "div",
+                "text": {"tag": "lark_md", "content": "\n".join(lines)},
+            })
+        elements.append({"tag": "hr"})
+
+    # ── AI 点评 ──
+    if editor_note:
+        elements.append({
+            "tag": "div",
+            "text": {"tag": "lark_md", "content": f"💡 **AI 点评**: {editor_note}"},
+        })
+        elements.append({"tag": "hr"})
+
+    # ── 底部 ──
+    elements.append({
+        "tag": "note",
+        "elements": [
+            {"tag": "plain_text", "content": f"⚽ 数据来源: ESPN | AI 自动生成 | {last_updated}"},
+        ],
+    })
+
+    card = {
+        "msg_type": "interactive",
+        "card": {
+            "header": {
+                "title": {
+                    "tag": "plain_text",
+                    "content": f"⚽ 2026 世界杯日报 · {date_str}",
+                },
+                "template": "green",
+            },
+            "elements": elements,
+        },
+    }
+
+    return await _send_to_feishu(card)
