@@ -28,8 +28,9 @@ jobs:
       - name: 运行每日资讯助手
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_BASE_URL: https://api.deepseek.com/anthropic
+          ANTHROPIC_MODEL: deepseek-v4-pro
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
-          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001' }}
         run: |
           python -m src.main
 
