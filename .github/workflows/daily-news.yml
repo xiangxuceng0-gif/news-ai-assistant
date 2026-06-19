@@ -1,0 +1,39 @@
+name: 每日资讯简报
+
+on:
+  schedule:
+    # UTC 0:00 = 北京时间 8:00
+    - cron: "0 0 * * *"
+  # 允许手动触发（用于测试）
+  workflow_dispatch:
+
+jobs:
+  daily-news:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout 仓库
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装依赖
+        run: |
+          pip install -r requirements.txt
+
+      - name: 运行每日资讯助手
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          ANTHROPIC_MODEL: ${{ secrets.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001' }}
+        run: |
+          python -m src.main
+
+      - name: 失败通知 (可选)
+        if: failure()
+        run: |
+          echo "每日资讯助手运行失败，请检查日志。"
