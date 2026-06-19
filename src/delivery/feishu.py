@@ -8,7 +8,7 @@ from datetime import datetime, timezone, timedelta
 
 import httpx
 
-from src.config import FEISHU_WEBHOOK_URL
+from src.config import FEISHU_WEBHOOK_URL, FEISHU_WORLDCUP_WEBHOOK_URL
 
 logger = logging.getLogger(__name__)
 
@@ -185,12 +185,13 @@ def _build_card(
     return card
 
 
-async def _send_to_feishu(card: Dict[str, Any]) -> bool:
+async def _send_to_feishu(card: Dict[str, Any], webhook_url: str = "") -> bool:
     """发送卡片到飞书 Webhook。"""
+    url = webhook_url or FEISHU_WEBHOOK_URL
     try:
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(
-                FEISHU_WEBHOOK_URL,
+                url,
                 json=card,
                 headers={"Content-Type": "application/json"},
             )
@@ -239,13 +240,14 @@ async def _send_empty_report() -> bool:
 
 async def send_worldcup_report(report: Dict[str, Any]) -> bool:
     """
-    将世界杯战报推送到飞书。
+    将世界杯战报推送到世界杯专用飞书群。
 
     Args:
         report: summarizer 返回的 {"matches": [...], "editor_note": "..."}
     """
-    if not FEISHU_WEBHOOK_URL:
-        logger.error("未设置 FEISHU_WEBHOOK_URL")
+    webhook_url = FEISHU_WORLDCUP_WEBHOOK_URL or FEISHU_WEBHOOK_URL
+    if not webhook_url:
+        logger.error("未设置世界杯 Webhook URL")
         return False
 
     matches = report.get("matches", [])
@@ -265,7 +267,7 @@ async def send_worldcup_report(report: Dict[str, Any]) -> bool:
                     "text": {"tag": "lark_md", "content": "今日没有世界杯比赛安排。"},
                 }],
             },
-        })
+        }, webhook_url)
 
     # 分类
     completed = [m for m in matches if m.get("status") == "completed"]
@@ -388,4 +390,4 @@ async def send_worldcup_report(report: Dict[str, Any]) -> bool:
         },
     }
 
-    return await _send_to_feishu(card)
+    return await _send_to_feishu(card, webhook_url)

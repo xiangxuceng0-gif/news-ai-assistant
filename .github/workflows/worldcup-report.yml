@@ -31,6 +31,7 @@ jobs:
           ANTHROPIC_BASE_URL: https://api.deepseek.com/anthropic
           ANTHROPIC_MODEL: deepseek-v4-pro
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          FEISHU_WORLDCUP_WEBHOOK_URL: ${{ secrets.FEISHU_WORLDCUP_WEBHOOK_URL }}
         run: |
           python -m src.worldcup_main
 

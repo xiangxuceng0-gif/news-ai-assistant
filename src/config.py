@@ -10,6 +10,7 @@ load_dotenv(override=True)
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
 FEISHU_WEBHOOK_URL = os.getenv("FEISHU_WEBHOOK_URL", "")
+FEISHU_WORLDCUP_WEBHOOK_URL = os.getenv("FEISHU_WORLDCUP_WEBHOOK_URL", "")
 
 # ── 新闻处理参数 ──────────────────────────────────────
 MAX_NEWS_COUNT = int(os.getenv("MAX_NEWS_COUNT", "20"))
